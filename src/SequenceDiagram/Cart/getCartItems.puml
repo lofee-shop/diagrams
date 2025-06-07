@@ -39,3 +39,4 @@ deactivate CartService
 
 CartController --> 사용자: 200 OK\n[ {cartItemDto1}, {cartItemDto2}, … ]
 @enduml
+
