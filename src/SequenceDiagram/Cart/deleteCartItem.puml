@@ -1,0 +1,37 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant CartController
+participant CartService
+participant CartItemRepository
+database DB
+
+사용자 -> CartController: DELETE /cart/{cartItemId}
+activate CartController
+
+CartController -> CartService: deleteCartItem(userId, cartItemId)
+activate CartService
+
+CartService -> CartItemRepository: findById(cartItemId)
+activate CartItemRepository
+CartItemRepository -> DB: SELECT * FROM cart_item WHERE id=?
+DB --> CartItemRepository: CartItem row
+deactivate CartItemRepository
+
+alt userId matches CartItem.user.id
+    CartService -> CartItemRepository: delete(cartItem)
+    activate CartItemRepository
+    CartItemRepository -> DB: DELETE FROM cart_item WHERE id=?
+    DB --> CartItemRepository: delete OK
+    deactivate CartItemRepository
+    CartService --> CartController: void
+    deactivate CartService
+    CartController --> 사용자: 204 No Content
+else userId mismatch
+    CartService --> CartController: throws UNAUTHORIZED_USER exception
+    deactivate CartService
+    CartController --> 사용자: 403 Forbidden
+end
+
+@enduml

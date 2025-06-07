@@ -1,0 +1,57 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant CartController
+participant CartService
+participant UserRepository
+participant ProductRepository
+participant CartItemRepository
+database DB
+
+사용자 -> CartController: POST /cart\n{ productId }
+activate CartController
+
+CartController -> CartService: createCartItem(userId, productId)
+activate CartService
+
+CartService -> UserRepository: findById(userId)
+activate UserRepository
+UserRepository -> DB: SELECT * FROM user WHERE id=?
+DB --> UserRepository: User row
+deactivate UserRepository
+
+CartService -> ProductRepository: findById(productId)
+activate ProductRepository
+ProductRepository -> DB: SELECT * FROM product WHERE id=?
+DB --> ProductRepository: Product row
+deactivate ProductRepository
+
+CartService -> CartItemRepository: findByUserAndProduct(user, product)
+activate CartItemRepository
+CartItemRepository -> DB: SELECT * FROM cart_item WHERE user_id=? AND product_id=?
+DB --> CartItemRepository: existingItem? (0 or 1)
+deactivate CartItemRepository
+
+alt existing cart item found
+    CartService -> CartItem: addQuantity(1)
+    CartService -> CartItemRepository: save(updatedCartItem)
+    activate CartItemRepository
+    CartItemRepository -> DB: UPDATE cart_item SET quantity=? WHERE cart_id=?
+    DB --> CartItemRepository: OK
+    deactivate CartItemRepository
+
+    CartService --> CartController: CartAddResponseDto(cartItemId)
+else no existing cart item
+    CartService -> CartItemRepository: save(new CartItem(user, product, 1))
+    activate CartItemRepository
+    CartItemRepository -> DB: INSERT INTO cart_item(user_id, product_id, quantity) VALUES(?, ?, 1)
+    DB --> CartItemRepository: generated cartItemId
+    deactivate CartItemRepository
+
+    CartService --> CartController: CartAddResponseDto(cartItemId)
+end
+
+deactivate CartService
+CartController --> 사용자: 201 Created\n{ cartItemId }
+@enduml

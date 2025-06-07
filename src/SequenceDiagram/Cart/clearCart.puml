@@ -1,0 +1,31 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant CartController
+participant CartService
+participant UserRepository
+participant CartItemRepository
+database DB
+
+사용자 -> CartController: DELETE /cart
+activate CartController
+
+CartController -> CartService: clearCartItem(userId)
+activate CartService
+
+CartService -> UserRepository: findById(userId)
+activate UserRepository
+UserRepository -> DB: SELECT * FROM user WHERE id=?
+DB --> UserRepository: User row
+deactivate UserRepository
+
+CartService -> CartItemRepository: deleteAllByUser(user)
+activate CartItemRepository
+CartItemRepository -> DB: DELETE FROM cart_item WHERE user_id=?
+DB --> CartItemRepository: delete OK
+deactivate CartItemRepository
+
+deactivate CartService
+CartController --> 사용자: 204 No Content
+@enduml

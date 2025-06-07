@@ -1,0 +1,36 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant CartController
+participant CartService
+participant CartItemRepository
+database DB
+
+사용자 -> CartController: POST /cart/{cartItemId}\n{ quantity: n }
+activate CartController
+
+CartController -> CartService: updateCartItem(userId, request)
+activate CartService
+
+CartService -> CartItemRepository: findById(cartItemId)
+activate CartItemRepository
+CartItemRepository -> DB: SELECT * FROM cart_item WHERE cart_id=?
+DB --> CartItemRepository: cartItem row
+deactivate CartItemRepository
+
+alt user not owner
+    CartService --> CartController: throw UNAUTHORIZED_USER (403)
+    deactivate CartService
+    CartController --> 사용자: 403 Forbidden
+else quantity > product.stock
+    CartService --> CartController: throw STOCK_NOT_ENOUGH (409)
+    deactivate CartService
+    CartController --> 사용자: 409 Conflict
+else valid update
+    CartService -> CartService: cartItem.updateQuantity(quantity)
+    CartService --> CartController: void
+    deactivate CartService
+    CartController --> 사용자: 200 OK
+end
+@enduml

@@ -1,0 +1,41 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant CartController
+participant CartService
+participant UserRepository
+participant CartItemRepository
+participant FileService
+database DB
+
+사용자 -> CartController: GET /cart
+activate CartController
+
+CartController -> CartService: getCartItems(userId)
+activate CartService
+
+CartService -> UserRepository: findById(userId)
+activate UserRepository
+UserRepository -> DB: SELECT * FROM user WHERE id=?
+DB --> UserRepository: User row
+deactivate UserRepository
+
+CartService -> CartItemRepository: findByUser(user)
+activate CartItemRepository
+CartItemRepository -> DB: SELECT * FROM cart_item WHERE user_id=?
+DB --> CartItemRepository: [cartItem1, cartItem2, …]
+deactivate CartItemRepository
+
+loop for each cartItem in [cartItem1, cartItem2, …]
+    CartService -> FileService: getDownloadPresignedUrl(PRODUCTS, product.id, mainImgUrl)
+    activate FileService
+    FileService --> CartService: presignedUrl
+    deactivate FileService
+end
+
+CartService --> CartController: List<CartItemResponseDto>
+deactivate CartService
+
+CartController --> 사용자: 200 OK\n[ {cartItemDto1}, {cartItemDto2}, … ]
+@enduml
