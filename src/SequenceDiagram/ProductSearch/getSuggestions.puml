@@ -1,0 +1,34 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant ProductSearchController as Controller
+participant ProductSearchService    as Service
+participant ProductSearchRepository as ProdSearchRepo
+participant UserRepository          as UserRepo
+database DB
+
+사용자 -> Controller: GET /search/suggestions?q={query}
+activate Controller
+
+Controller -> Service: getSuggestions(query)
+activate Service
+
+Service -> ProdSearchRepo: findTop5ByNameContainingIgnoreCase(query)
+activate ProdSearchRepo
+ProdSearchRepo -> DB: SELECT id, name FROM product WHERE name ILIKE '%query%' LIMIT 5
+DB --> ProdSearchRepo: List<Product>
+deactivate ProdSearchRepo
+
+Service -> UserRepo: findTop5ByNicknameContainingIgnoreCase(query)
+activate UserRepo
+UserRepo -> DB: SELECT id, nickname FROM user WHERE nickname ILIKE '%query%' LIMIT 5
+DB --> UserRepo: List<User>
+deactivate UserRepo
+
+deactivate Service
+Service --> Controller: ProductSearchResponse{ suggestions }
+deactivate Controller
+
+Controller --> 사용자: 200 OK\n{ suggestions: [...] }
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+
+participant "WatchlistController" as Controller
+participant "WatchlistService" as Service
+participant "UserRepository" as UserRepo
+participant "ProductRepository" as ProdRepo
+participant "WatchlistRepository" as WRepo
+database "DB" as DB
+
+사용자 -> Controller: POST /watchlist/toggle\n{ productId }
+Controller -> Service: toggleWatchlist(userId, productId)
+activate Service
+
+Service -> UserRepo: findById(userId)
+activate UserRepo
+UserRepo -> DB: SELECT * FROM user WHERE id=?
+DB --> UserRepo: User row
+deactivate UserRepo
+
+Service -> ProdRepo: findById(productId)
+activate ProdRepo
+ProdRepo -> DB: SELECT * FROM product WHERE id=?
+DB --> ProdRepo: Product row
+deactivate ProdRepo
+
+Service -> WRepo: findByUserAndProduct(user, product)
+activate WRepo
+WRepo -> DB: SELECT * FROM watchlist WHERE user_id=? AND product_id=?
+DB --> WRepo: existingWatchlist? (0 or 1)
+deactivate WRepo
+
+alt 이미 관심목록으로 표시되어 있을 시
+    WRepo -> DB: DELETE FROM watchlist WHERE id=?
+    DB --> WRepo: delete OK
+    WRepo --> Service: void
+    Service --> Service: return WatchlistResponse(active=false)
+else 관심목록으로 표시가 안돼 있다면
+    Service -> WRepo: save(new Watchlist(user, product))
+    activate WRepo
+    WRepo -> DB: INSERT INTO watchlist(user_id, product_id) VALUES (?, ?)
+    DB --> WRepo: insert OK
+    deactivate WRepo
+    WRepo --> Service: saved Watchlist
+    Service --> Service: return WatchlistResponse(active=true)
+end
+
+deactivate Service
+Service --> Controller: WatchlistResponse(active=…)
+Controller --> 사용자: 200 OK\n{ active }
+@enduml

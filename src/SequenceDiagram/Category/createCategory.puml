@@ -1,0 +1,23 @@
+@startuml
+
+actor 관리자
+
+participant "CategoryController" as Controller
+participant "CategoryService" as Service
+participant "CategoryRepository" as Repo
+database "DB" as DB
+
+관리자 -> Controller: POST /categories\n{ categoryName }
+Controller -> Service: createCategory(request)
+activate Service
+Service -> Repo: save(new Category(...))
+activate Repo
+Repo -> DB: INSERT INTO category ...
+DB --> Repo: OK (persisted entity with id)
+deactivate Repo
+Repo --> Service: Category entity
+deactivate Service
+Service --> Controller: Category entity
+Controller --> 관리자: 201 Created\n{ id, name}
+
+@enduml

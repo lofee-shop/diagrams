@@ -1,0 +1,63 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant ProductController as Controller
+participant ProductService    as Service
+participant ProductRepository as ProdRepo
+participant UserRepository    as UserRepo
+participant WatchlistRepository as WRepo
+participant FileService       as FileSvc
+database DB
+
+사용자 -> Controller: GET /products/{productId}\nAuthorization: Bearer ...
+activate Controller
+
+Controller -> Service: getProductDetail(productId, userId)
+activate Service
+
+Service -> ProdRepo: findById(productId)
+activate ProdRepo
+ProdRepo -> DB: SELECT * FROM product WHERE id=?
+DB --> ProdRepo: product + images
+deactivate ProdRepo
+
+alt userId != null
+    Service -> UserRepo: findById(userId)
+    activate UserRepo
+    UserRepo -> DB: SELECT * FROM user WHERE id=?
+    DB --> UserRepo: user row
+    deactivate UserRepo
+
+    Service -> WRepo: existsByUserAndProduct(user, product)
+    activate WRepo
+    WRepo -> DB: SELECT COUNT(*) FROM watchlist WHERE user_id=? AND product_id=?
+    DB --> WRepo: 0 or 1
+    deactivate WRepo
+end
+
+group Build image URLs
+    loop for each image in product.images of type PRODUCT
+        Service -> FileSvc: getDownloadPresignedUrl(PRODUCTS, product.id, imgPath)
+        activate FileSvc
+        FileSvc --> Service: presignedUrl
+        deactivate FileSvc
+    end
+
+    Service -> FileSvc: getDownloadPresignedUrl(PRODUCTS, product.id, mainImgPath)
+    activate FileSvc
+    FileSvc --> Service: mainPresignedUrl
+    deactivate FileSvc
+
+    Service -> FileSvc: getDownloadPresignedUrl(PRODUCTS, product.id, descImgPath)
+    activate FileSvc
+    FileSvc --> Service: descPresignedUrl
+    deactivate FileSvc
+end
+
+deactivate Service
+Service --> Controller: ProductDetailResponse{...}
+deactivate Controller
+
+Controller --> 사용자: 200 OK\n{ detailed product info }
+@enduml

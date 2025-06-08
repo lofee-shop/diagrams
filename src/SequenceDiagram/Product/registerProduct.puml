@@ -1,0 +1,74 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 판매자
+participant ProductController as Controller
+participant ProductService    as Service
+participant SellerRepository  as SellerRepo
+participant SubCategoryRepository as SubCatRepo
+participant ProductRepository as ProdRepo
+participant FileService       as FileSvc
+database DB
+
+판매자 -> Controller: POST /products/regist\n{ subCategoryId, name, price, stock, description, ... }
+activate Controller
+
+Controller -> Service: registProduct(userId, request)
+activate Service
+
+Service -> SellerRepo: findByUser_Id(userId)
+activate SellerRepo
+SellerRepo -> DB: SELECT * FROM seller WHERE user_id=?
+DB --> SellerRepo: seller row
+deactivate SellerRepo
+
+Service -> SubCatRepo: findById(subCategoryId)
+activate SubCatRepo
+SubCatRepo -> DB: SELECT * FROM subcategory WHERE id=?
+DB --> SubCatRepo: subcategory row
+deactivate SubCatRepo
+
+Service -> ProdRepo: save(product)
+activate ProdRepo
+ProdRepo -> DB: INSERT INTO product(...)
+DB --> ProdRepo: generated product.id
+deactivate ProdRepo
+
+alt mainImgUpdate == true
+    Service -> FileSvc: getUploadPresignedUrl(PRODUCTS, product.id, mainImgFilename)
+    activate FileSvc
+    FileSvc --> Service: presignedUrl
+    deactivate FileSvc
+
+    Service -> DB: INSERT INTO product_image(type=MAIN, imgPath=mainImgFilename)
+    DB --> Service: OK
+end
+
+alt productImgIndexes not empty
+    loop each index in request.productImgIndexes
+        Service -> FileSvc: getUploadPresignedUrl(PRODUCTS, product.id, prodImgFilename)
+        activate FileSvc
+        FileSvc --> Service: presignedUrl
+        deactivate FileSvc
+
+        Service -> DB: INSERT INTO product_image(type=PRODUCT, imgPath=prodImgFilename, imgIndex=index)
+        DB --> Service: OK
+    end
+end
+
+alt descriptionImgUpdate == true
+    Service -> FileSvc: getUploadPresignedUrl(PRODUCTS, product.id, descImgFilename)
+    activate FileSvc
+    FileSvc --> Service: presignedUrl
+    deactivate FileSvc
+
+    Service -> DB: INSERT INTO product_image(type=DESCRIPTION, imgPath=descImgFilename)
+    DB --> Service: OK
+end
+
+deactivate Service
+Service --> Controller: ProductRegisterResponseDto(productId, mainImgUrl, productImgUrls, descImgUrl)
+deactivate Controller
+
+Controller --> 판매자: 200 OK\n{ productId, mainImgUrl, productImgUrls, descriptionImgUrl }
+@enduml

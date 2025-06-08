@@ -1,0 +1,42 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 관리자
+participant SubCategoryController as Controller
+participant SubCategoryService    as Service
+participant CategoryRepository    as CatRepo
+participant SubCategoryRepository as SubCatRepo
+database DB
+
+관리자 -> Controller: POST /subcategories\n{ categoryId, subcategoryName }
+activate Controller
+
+Controller -> Service: createSubCategory(request)
+activate Service
+
+Service -> CatRepo: findById(request.categoryId)
+activate CatRepo
+CatRepo -> DB: SELECT * FROM category WHERE id = ?
+DB --> CatRepo: Category row or empty
+deactivate CatRepo
+
+alt 상위 카테고리 존재
+    Service -> Service: new SubCategory(category, subcategoryName)
+    Service -> SubCatRepo: save(subCategory)
+    activate SubCatRepo
+    SubCatRepo -> DB: INSERT INTO subcategory(category_id, name) VALUES (?, ?)
+    DB --> SubCatRepo: generated subcategory_id
+    deactivate SubCatRepo
+
+    Service --> Controller: SubCategory(id, categoryId, name)
+else 상위 카테고리 없음
+    Service --> Controller: throw CustomException(CATEGORY_NOT_FOUND)
+end
+deactivate Service
+
+alt 성공
+    Controller --> 관리자: 200 OK\nSubCategoryResponse{...}
+else 실패
+    Controller --> 관리자: 404 Not Found
+end
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant HomeProductController as Controller
+participant HomeProductService    as Service
+participant SubCategoryRepository as SubCatRepo
+participant ProductRepository     as ProdRepo
+participant FileService           as FileSvc
+database DB
+
+사용자 -> Controller: GET /home/subcategories/{subCategoryId}?page={page}
+activate Controller
+
+Controller -> Service: getProductsBySubCategoryById(subCategoryId, page)
+activate Service
+
+Service -> SubCatRepo: findById(subCategoryId)
+activate SubCatRepo
+SubCatRepo -> DB: SELECT * FROM subcategory WHERE id = ?
+DB --> SubCatRepo: SubCategory row or empty
+deactivate SubCatRepo
+
+alt 상위 카테고리 존재하지 않음
+    Service --> Controller: throw SUBCATEGORY_NOT_FOUND (404)
+    deactivate Service
+    Controller --> 사용자: 404 Not Found
+else 카테고리 존재
+    Service -> ProdRepo: countBySubCategory_Id(subCategoryId)
+    activate ProdRepo
+    ProdRepo -> DB: SELECT COUNT(*) FROM product WHERE subcategory_id = ?
+    DB --> ProdRepo: totalCount
+    deactivate ProdRepo
+
+    Service -> ProdRepo: findProductSummaries(null, subCategoryId, pageable)
+    activate ProdRepo
+    ProdRepo -> DB: SELECT ... LIMIT PAGE_SIZE OFFSET ...
+    DB --> ProdRepo: List<ProductSummaryProjectionDto>
+    deactivate ProdRepo
+
+    loop 각 projection
+        Service -> FileSvc: getDownloadPresignedUrl(PRODUCTS, proj.productId, proj.mainImgUrl)
+        activate FileSvc
+        FileSvc --> Service: presignedUrl (or null)
+        deactivate FileSvc
+    end
+
+    Service --> Controller: ProductsPageResponseDto(productDtos, pagination)
+    deactivate Service
+
+    Controller --> 사용자: 200 OK\n{ products, pagination }
+end
+@enduml

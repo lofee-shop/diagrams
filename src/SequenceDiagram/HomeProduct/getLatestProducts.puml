@@ -1,0 +1,38 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 사용자
+participant HomeProductController as Controller
+participant HomeProductService    as Service
+participant ProductRepository     as Repo
+participant FileService           as FileSvc
+database DB
+
+사용자 -> Controller: GET /home/latest
+activate Controller
+
+Controller -> Service: getLatestTenProducts()
+activate Service
+
+Service -> Repo: findProductSummaries(null, null, topTen)
+activate Repo
+Repo -> DB: SELECT ... LIMIT 10
+DB --> Repo: list of ProductSummaryProjectionDto
+deactivate Repo
+
+alt no products found
+    Service --> Controller: throw PRODUCT_NOT_FOUND (404)
+    deactivate Service
+    Controller --> 사용자: 404 Not Found
+else products found
+    loop for each projection proj
+        Service -> FileSvc: getDownloadPresignedUrl(PRODUCTS, proj.productId, proj.mainImgUrl)
+        activate FileSvc
+        FileSvc --> Service: presignedUrl or null
+        deactivate FileSvc
+    end
+    Service --> Controller: List<ProductSummaryResponseDto>
+    deactivate Service
+    Controller --> 사용자: 200 OK\n[ {product summaries} ]
+end
+@enduml

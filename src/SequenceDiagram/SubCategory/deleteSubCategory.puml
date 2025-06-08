@@ -1,0 +1,36 @@
+@startuml
+skinparam sequenceArrowThickness 2
+
+actor 관리자
+
+participant "SubCategoryController" as Controller
+participant "SubCategoryService" as Service
+participant "CategoryRepository" as CatRepo
+participant "SubCategoryRepository" as SubRepo
+database "DB" as DB
+
+관리자 -> Controller: DELETE /subcategories/{subCategoryId}
+Controller -> Service: deleteSubCategory(subCategoryId)
+activate Service
+Service -> SubRepo: findById(subCategoryId)
+activate SubRepo
+SubRepo -> DB: SELECT * FROM subcategory WHERE id=?
+alt 존재
+    DB --> SubRepo: SubCategory row
+    deactivate SubRepo
+    Service -> SubRepo: delete(sub)
+    activate SubRepo
+    SubRepo -> DB: DELETE FROM subcategory WHERE id=?
+    DB --> SubRepo: OK
+    deactivate SubRepo
+    Service --> Controller: void
+    deactivate Service
+    Controller --> 관리자: 204 No Content
+else 미존재
+    DB --> SubRepo: empty
+    deactivate SubRepo
+    Service --> Controller: throw CustomException(SUBCATEGORY_NOT_FOUND)
+    deactivate Service
+    Controller --> 관리자: 404 { "message":"서브카테고리를 찾을 수 없습니다." }
+end
+@enduml
