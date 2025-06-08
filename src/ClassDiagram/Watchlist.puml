@@ -1,0 +1,13 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Watchlist {
+    - id: Long
+    - user: User
+    - product: Product
+    + Watchlist(user: User, product: Product)
+}
+
+Watchlist " * " --> " 1 " User    : user
+Watchlist " * " --> " 1 " Product : product
+@enduml

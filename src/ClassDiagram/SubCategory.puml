@@ -1,0 +1,18 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class SubCategory {
+    - id: Long
+    - subcategoryName: String
+    - category: Category
+    - products: List<Product>
+    + SubCategory(category: Category, subcategoryName: String)
+    + getId(): Long
+    + getSubcategoryName(): String
+    + getCategory(): Category
+    + getProducts(): List<Product>
+}
+
+SubCategory --> Category : category
+SubCategory "1" o-- "*" Product : products
+@enduml

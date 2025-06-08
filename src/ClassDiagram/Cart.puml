@@ -1,0 +1,16 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class CartItem {
+    - id: Long
+    - user: User
+    - product: Product
+    - quantity: Integer
+    + CartItem(user: User, product: Product, quantity: int)
+    + addQuantity(additional: int): void
+    + updateQuantity(quantity: int): void
+}
+
+CartItem " * " --> " 1 " User    : user
+CartItem " * " --> " 1 " Product : product
+@enduml

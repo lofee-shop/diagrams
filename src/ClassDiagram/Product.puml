@@ -1,0 +1,35 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Product {
+    - id: Long
+    - seller: Seller
+    - subCategory: SubCategory
+    - name: String
+    - price: Long
+    - stock: Integer
+    - info: String
+    - viewCount: Integer
+    - watchlistCount: Integer
+    - createdAt: Instant
+    - updatedAt: Instant
+    - cartItems: List<CartItem>
+    - watchlists: List<Watchlist>
+    - images: List<ProductImage>
+    + Product(seller: Seller, subCategory: SubCategory, name: String,
+              price: Long, stock: Integer, info: String)
+    + update(seller: Seller, subCategory: SubCategory, name: String,
+             price: Long, stock: Integer, info: String): void
+    + getMainImageUrl(): String
+    + addImage(image: ProductImage): void
+    + addViewCount(): void
+    + setStock(quantity: int): void
+    + increaseStock(quantity: int): void
+}
+
+Product " * " --> " 1 " Seller       : seller
+Product " * " --> " 1 " SubCategory  : subCategory
+Product " 1 " o-- " * " CartItem     : cartItems
+Product " 1 " o-- " * " Watchlist    : watchlists
+Product " 1 " o-- " * " ProductImage : images
+@enduml

@@ -1,0 +1,36 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Category {
+    - id: Long
+    - categoryName: String
+    - sellerCategories: List<SellerCategory>
+    - subCategories: List<SubCategory>
+    + Category(categoryName: String)
+    + getId(): Long
+    + getCategoryName(): String
+}
+
+class SellerCategory {
+    - id: Long
+    - seller: Seller
+    - category: Category
+    + SellerCategory(seller: Seller, category: Category)
+    + updateCategory(category: Category): void
+}
+
+class SubCategory {
+    - id: Long
+    - category: Category
+    - subcategoryName: String
+    - products: List<Product>
+    + SubCategory(category: Category, subcategoryName: String)
+}
+
+Category "1" o-- "*" SellerCategory : sellerCategories
+Category "1" o-- "*" SubCategory     : subCategories
+
+SellerCategory --> Category : category
+
+SubCategory --> Category    : category
+@enduml
